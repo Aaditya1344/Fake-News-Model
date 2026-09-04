@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Fake News Detector</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }
+  body {
+    background: linear-gradient(135deg, #1e293b, #0f172a);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .container {
+    background: #fff;
+    border-radius: 16px;
+    padding: 40px;
+    max-width: 600px;
+    width: 100%;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+  }
+  h1 { text-align: center; color: #1e293b; margin-bottom: 8px; }
+  p.subtitle { text-align: center; color: #64748b; margin-bottom: 24px; }
+  label { display: block; margin-top: 16px; margin-bottom: 6px; font-weight: 600; color: #334155; }
+  input, textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 14px;
+    resize: vertical;
+  }
+  textarea { min-height: 140px; }
+  button {
+    width: 100%;
+    margin-top: 22px;
+    padding: 14px;
+    background: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  button:hover { background: #1d4ed8; }
+  button:disabled { background: #94a3b8; cursor: not-allowed; }
+  #result {
+    margin-top: 26px;
+    padding: 20px;
+    border-radius: 10px;
+    display: none;
+  }
+  #result.fake { background: #fee2e2; border: 1px solid #fca5a5; }
+  #result.credible { background: #dcfce7; border: 1px solid #86efac; }
+  .result-label { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+  .fake .result-label { color: #b91c1c; }
+  .credible .result-label { color: #15803d; }
+  .bar-wrap { margin-top: 10px; }
+  .bar-label { font-size: 13px; color: #475569; margin-bottom: 4px; display:flex; justify-content: space-between; }
+  .bar-bg { background: #e2e8f0; border-radius: 6px; overflow: hidden; height: 10px; }
+  .bar-fill { height: 100%; border-radius: 6px; }
+  .fill-fake { background: #ef4444; }
+  .fill-credible { background: #22c55e; }
+  #error { color: #b91c1c; margin-top: 14px; text-align: center; display: none; }
+</style>
+</head>
+<body>
+  <div class="container">
+    <h1>📰 Fake News Detector</h1>
+    <p class="subtitle">Powered by Logistic Regression + TF-IDF</p>
+
+    <label for="title">News Title</label>
+    <input type="text" id="title" placeholder="Enter the news headline...">
+
+    <label for="content">News Content</label>
+    <textarea id="content" placeholder="Paste the article content here..."></textarea>
+
+    <button id="predictBtn" onclick="predictNews()">Analyze News</button>
+
+    <div id="error"></div>
+
+    <div id="result">
+      <div class="result-label" id="resultLabel"></div>
+      <div class="bar-wrap">
+        <div class="bar-label"><span>Fake</span><span id="fakePct"></span></div>
+        <div class="bar-bg"><div class="bar-fill fill-fake" id="fakeBar"></div></div>
+      </div>
+      <div class="bar-wrap">
+        <div class="bar-label"><span>Credible</span><span id="credPct"></span></div>
+        <div class="bar-bg"><div class="bar-fill fill-credible" id="credBar"></div></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const API_URL = "http://127.0.0.1:5000/predict";
+
+async function predictNews() {
+  const title = document.getElementById('title').value.trim();
+  const content = document.getElementById('content').value.trim();
+  const btn = document.getElementById('predictBtn');
+  const errorDiv = document.getElementById('error');
+  const resultDiv = document.getElementById('result');
+
+  errorDiv.style.display = 'none';
+  resultDiv.style.display = 'none';
+
+  if (!title && !content) {
+    errorDiv.textContent = 'Please enter a title or content.';
+    errorDiv.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Analyzing...';
+
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, content })
+    });
+
+    if (!res.ok) throw new Error('Server error');
+    const data = await res.json();
+
+    resultDiv.className = data.label === 'Fake' ? 'fake' : 'credible';
+    resultDiv.style.display = 'block';
+    document.getElementById('resultLabel').textContent =
+      `Prediction: ${data.label} (${data.confidence}% confidence)`;
+
+    document.getElementById('fakePct').textContent = data.fake_probability + '%';
+    document.getElementById('credPct').textContent = data.credible_probability + '%';
+    document.getElementById('fakeBar').style.width = data.fake_probability + '%';
+    document.getElementById('credBar').style.width = data.credible_probability + '%';
+
+  } catch (err) {
+    errorDiv.textContent = 'Error connecting to server. Make sure the Flask backend is running on port 5000.';
+    errorDiv.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Analyze News';
+  }
+}
+</script>
+</body>
+</html>
