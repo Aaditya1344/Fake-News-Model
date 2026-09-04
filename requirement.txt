@@ -1,6 +1,6 @@
-# requirements.txt
 streamlit
 scikit-learn
 joblib
 plotly
 pandas
+numpy
