@@ -1,7 +1,6 @@
 # requirements.txt
-flask
-flask-cors
+streamlit
 scikit-learn
 joblib
+plotly
 pandas
-numpy
